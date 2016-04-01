@@ -28,6 +28,7 @@ class ScoreKeeper
 
   getUser: (room, user) ->
     @storage.scores[room] ||= {}
+    @storage.reasons[room] ||= {}
     @storage.scores[room][user] ||= 0
     @storage.reasons[room][user] ||= {}
     user
