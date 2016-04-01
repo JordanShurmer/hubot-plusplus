@@ -41,7 +41,7 @@ class ScoreKeeper
 
   add: (user, from, room, reason) ->
     if @validate(user, from)
-      user = @getUser(user)
+      user = @getUser(room, user)
       @storage.scores[room][user]++
 #      @storage.reasons[user] ||= {}
 
@@ -55,7 +55,7 @@ class ScoreKeeper
 
   subtract: (user, from, room, reason) ->
     if @validate(user, from)
-      user = @getUser(user)
+      user = @getUser(room, user)
       @storage.scores[room][user]--
 #      @storage.reasons[user] ||= {}
 
@@ -68,7 +68,7 @@ class ScoreKeeper
       [null, null]
 
   erase: (user, from, room, reason) ->
-    user = @getUser(user)
+    user = @getUser(room, user)
 
     if reason
       delete @storage.reasons[room][user][reason]
@@ -82,11 +82,11 @@ class ScoreKeeper
     false
 
   scoreForUser: (room, user) ->
-    user = @getUser(user)
+    user = @getUser(room, user)
     @storage.scores[room][user]
 
   reasonsForUser: (room, user) ->
-    user = @getUser(user)
+    user = @getUser(room, user)
     @storage.reasons[room][user]
 
   saveScoreLog: (user, from, room, reason) ->
