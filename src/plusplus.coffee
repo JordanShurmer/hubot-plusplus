@@ -12,10 +12,11 @@
 #   If not provided will default to 'score'.
 #
 # Commands:
-#   <name>++ [<reason>] - Increment score for a name (for a reason)
-#   <name>-- [<reason>] - Decrement score for a name (for a reason)
-#   hubot score <name> - Display the score for a name and some of the reasons
+#   <thing>++ [<reason>] - Increment score for thing (for a reason)
+#   <thing>-- [<reason>] - Decrement score for thing (for a reason)
+#   hubot score <thing> - Display the score for thing and some of the reasons
 #     Can be configured with the enviroment variable above HUBOT_PLUSPLUS_KEYWORD.
+#   hubot toggle score - Toggle the score mode between room and global for the room you're in
 #   hubot top <amount> - Display the top scoring <amount>
 #   hubot bottom <amount> - Display the bottom scoring <amount>
 #   hubot erase <name> [<reason>] - Remove the score for a name (for a reason)
@@ -36,6 +37,13 @@ module.exports = (robot) ->
   scoreKeeper = new ScoreKeeper(robot)
   scoreKeyword   = process.env.HUBOT_PLUSPLUS_KEYWORD or 'score'
 
+  getRoom = (room) ->
+    isolatedRooms = robot.brain.get('plusplus-isolatedrooms') || {}
+    if isolatedRooms[room]
+      return room
+
+    return "plusplus-global"
+
   # sweet regex bro
   robot.hear ///
     # from beginning of line
@@ -53,7 +61,7 @@ module.exports = (robot) ->
     # let's get our local vars in place
     [dummy, name, operator, reason] = msg.match
     from = msg.message.user.name.toLowerCase()
-    room = msg.message.room
+    room = getRoom msg.message.room
 
     # do some sanitizing
     reason = reason?.trim().toLowerCase()
@@ -110,7 +118,7 @@ module.exports = (robot) ->
     [__, name, reason] = msg.match
     from = msg.message.user.name.toLowerCase()
     user = msg.envelope.user
-    room = msg.message.room
+    room = getRoom msg.message.room
     reason = reason?.trim().toLowerCase()
 
     if name
@@ -136,7 +144,7 @@ module.exports = (robot) ->
   # Catch the message asking for the score.
   robot.respond new RegExp("(?:" + scoreKeyword + ") (for\s)?(.*)", "i"), (msg) ->
     name = msg.match[2].trim().toLowerCase()
-    room = msg.message.room
+    room = getRoom msg.message.room
 
     if name
       if name.charAt(0) == ':'
@@ -161,7 +169,7 @@ module.exports = (robot) ->
 
   robot.respond /(top|bottom) (\d+)/i, (msg) ->
     amount = parseInt(msg.match[2]) || 10
-    room = msg.message.room
+    room = getRoom msg.message.room
     message = []
 
     tops = scoreKeeper[msg.match[1]](room, amount)
@@ -177,6 +185,22 @@ module.exports = (robot) ->
       message.splice(0, 0, clark(_.first(_.pluck(tops, "score"), graphSize)))
 
     msg.send message.join("\n")
+
+    
+  robot.respond /toggle score/i, (res) ->
+    isolatedRooms = robot.brain.get('plusplus-isolatedrooms') || {}
+    room = res.message.room
+    message = ""
+
+    if isolatedRooms[room]
+      delete isolatedRooms[room]
+      message = "Score mode is now global"
+    else
+      isolatedRooms[room] = true
+      message = "Score mode is now room"
+
+    robot.brain.put 'plusplus-isolatedrooms', isolatedRooms
+    res.send message
 
 #  robot.router.get "/#{robot.name}/normalize-points", (req, res) ->
 #    scoreKeeper.normalize((score) ->
