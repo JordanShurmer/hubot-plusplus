@@ -1,10 +1,10 @@
 hubot-plusplus
 ==============
 
+This fork is to add a few pieces of functionality which are useful for how my team is using hubot on hipchat
+
 Give (or take away) points from people and things, all from the comfort of your
 personal Hubot.
-
-Note: don't make changes here; make changes to [the official repository](https://github.com/hubot-scripts/hubot-plusplus) instead.
 
 API
 ---

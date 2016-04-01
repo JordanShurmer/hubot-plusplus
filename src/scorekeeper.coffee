@@ -26,26 +26,27 @@ class ScoreKeeper
     storageLoaded() # just in case storage was loaded before we got here
 
 
-  getUser: (user) ->
-    @storage.scores[user] ||= 0
-    @storage.reasons[user] ||= {}
+  getUser: (room, user) ->
+    @storage.scores[room] ||= {}
+    @storage.scores[room][user] ||= 0
+    @storage.reasons[room][user] ||= {}
     user
 
   saveUser: (user, from, room, reason) ->
     @saveScoreLog(user, from, room, reason)
     @robot.brain.save()
 
-    [@storage.scores[user], @storage.reasons[user][reason] || "none"]
+    [@storage.scores[room][user], @storage.reasons[room][user][reason] || "none"]
 
   add: (user, from, room, reason) ->
     if @validate(user, from)
       user = @getUser(user)
-      @storage.scores[user]++
-      @storage.reasons[user] ||= {}
+      @storage.scores[room][user]++
+#      @storage.reasons[user] ||= {}
 
       if reason
-        @storage.reasons[user][reason] ||= 0
-        @storage.reasons[user][reason]++
+        @storage.reasons[room][user][reason] ||= 0
+        @storage.reasons[room][user][reason]++
 
       @saveUser(user, from, room, reason)
     else
@@ -54,12 +55,12 @@ class ScoreKeeper
   subtract: (user, from, room, reason) ->
     if @validate(user, from)
       user = @getUser(user)
-      @storage.scores[user]--
-      @storage.reasons[user] ||= {}
+      @storage.scores[room][user]--
+#      @storage.reasons[user] ||= {}
 
       if reason
-        @storage.reasons[user][reason] ||= 0
-        @storage.reasons[user][reason]--
+        @storage.reasons[room][user][reason] ||= 0
+        @storage.reasons[room][user][reason]--
 
       @saveUser(user, from, room, reason)
     else
@@ -69,23 +70,23 @@ class ScoreKeeper
     user = @getUser(user)
 
     if reason
-      delete @storage.reasons[user][reason]
-      @saveUser(user, from.name, room)
+      delete @storage.reasons[room][user][reason]
       return true
     else
-      delete @storage.scores[user]
-      delete @storage.reasons[user]
+      delete @storage.scores[room][user]
+      delete @storage.reasons[room][user]
       return true
 
+    @saveUser(user, from, room, reason)
     false
 
-  scoreForUser: (user) ->
+  scoreForUser: (room, user) ->
     user = @getUser(user)
-    @storage.scores[user]
+    @storage.scores[room][user]
 
-  reasonsForUser: (user) ->
+  reasonsForUser: (room, user) ->
     user = @getUser(user)
-    @storage.reasons[user]
+    @storage.reasons[room][user]
 
   saveScoreLog: (user, from, room, reason) ->
     unless typeof @storage.log[from] == "object"
@@ -123,10 +124,10 @@ class ScoreKeeper
   length: () ->
     @storage.log.length
 
-  top: (amount) ->
+  top: (room, amount) ->
     tops = []
 
-    for name, score of @storage.scores
+    for name, score of @storage.scores[room]
       tops.push(name: name, score: score)
 
     tops.sort((a,b) -> b.score - a.score).slice(0,amount)
@@ -135,15 +136,15 @@ class ScoreKeeper
     all = @top(@storage.scores.length)
     all.sort((a,b) -> b.score - a.score).reverse().slice(0,amount)
 
-  normalize: (fn) ->
-    scores = {}
-
-    _.each(@storage.scores, (score, name) ->
-      scores[name] = fn(score)
-      delete scores[name] if scores[name] == 0
-    )
-
-    @storage.scores = scores
-    @robot.brain.save()
+#  normalize: (fn) ->
+#    scores = {}
+#
+#    _.each(@storage.scores, (score, name) ->
+#      scores[name] = fn(score)
+#      delete scores[name] if scores[name] == 0
+#    )
+#
+#    @storage.scores = scores
+#    @robot.brain.save()
 
 module.exports = ScoreKeeper

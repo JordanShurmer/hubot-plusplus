@@ -41,7 +41,7 @@ module.exports = (robot) ->
     # from beginning of line
     ^
     # the thing being upvoted, which is any number of words and spaces
-    ([\s\w'@.\-:]*)
+    ([\s\w'@.\-:()]*)
     # allow for spaces after the thing being upvoted (@user ++)
     \s*
     # the increment/decrement operator ++ or --
@@ -136,6 +136,7 @@ module.exports = (robot) ->
   # Catch the message asking for the score.
   robot.respond new RegExp("(?:" + scoreKeyword + ") (for\s)?(.*)", "i"), (msg) ->
     name = msg.match[2].trim().toLowerCase()
+    room = msg.message.room
 
     if name
       if name.charAt(0) == ':'
@@ -145,8 +146,8 @@ module.exports = (robot) ->
 
     console.log(name)
 
-    score = scoreKeeper.scoreForUser(name)
-    reasons = scoreKeeper.reasonsForUser(name)
+    score = scoreKeeper.scoreForUser(room, name)
+    reasons = scoreKeeper.reasonsForUser(room, name)
 
     reasonString = if typeof reasons == 'object' && Object.keys(reasons).length > 0
                      "#{name} has #{score} points. here are some raisins:" +
@@ -160,9 +161,10 @@ module.exports = (robot) ->
 
   robot.respond /(top|bottom) (\d+)/i, (msg) ->
     amount = parseInt(msg.match[2]) || 10
+    room = msg.message.room
     message = []
 
-    tops = scoreKeeper[msg.match[1]](amount)
+    tops = scoreKeeper[msg.match[1]](room, amount)
 
     if tops.length > 0
       for i in [0..tops.length-1]
@@ -176,29 +178,29 @@ module.exports = (robot) ->
 
     msg.send message.join("\n")
 
-  robot.router.get "/#{robot.name}/normalize-points", (req, res) ->
-    scoreKeeper.normalize((score) ->
-      if score > 0
-        score = score - Math.ceil(score / 10)
-      else if score < 0
-        score = score - Math.floor(score / 10)
+#  robot.router.get "/#{robot.name}/normalize-points", (req, res) ->
+#    scoreKeeper.normalize((score) ->
+#      if score > 0
+#        score = score - Math.ceil(score / 10)
+#      else if score < 0
+#        score = score - Math.floor(score / 10)
+#
+#      score
+#    )
+#
+#    res.end JSON.stringify('done')
 
-      score
-    )
-
-    res.end JSON.stringify('done')
-
-  robot.router.get "/#{robot.name}/scores", (req, res) ->
-    query = querystring.parse(req._parsedUrl.query)
-
-    if query.name
-      obj = {}
-      obj[query.name] = scoreKeeper.scoreForUser(query.name)
-      res.end JSON.stringify(obj)
-    else
-      direction = query.direction || "top"
-      amount = query.limit || 10
-
-      tops = scoreKeeper[direction](amount)
-
-      res.end JSON.stringify(tops, null, 2)
+#  robot.router.get "/#{robot.name}/scores", (req, res) ->
+#    query = querystring.parse(req._parsedUrl.query)
+#
+#    if query.name
+#      obj = {}
+#      obj[query.name] = scoreKeeper.scoreForUser(query.name)
+#      res.end JSON.stringify(obj)
+#    else
+#      direction = query.direction || "top"
+#      amount = query.limit || 10
+#
+#      tops = scoreKeeper[direction](amount)
+#
+#      res.end JSON.stringify(tops, null, 2)
